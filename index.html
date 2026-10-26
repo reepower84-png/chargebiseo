@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>충전비서</title>
+<meta name="description" content="전기차 월 주행거리와 자주 가는 충전소를 넣으면 가장 싼 충전 멤버십·카드 조합과 월 절약액을 계산해 드립니다.">
+<meta name="theme-color" content="#1E4FD6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="충전비서">
+<meta property="og:type" content="website">
+<meta property="og:title" content="충전비서 · 전기차 충전비 계산기">
+<meta property="og:description" content="지금 쓰는 카드로 한 달에 얼마 손해 보고 있을까? 34개 충전사업자 단가로 가장 싼 멤버십·카드 조합을 찾아 드립니다.">
+<meta property="og:image" content="https://reepower84-png.github.io/chargebiseo/icons/og.png">
+<meta property="og:url" content="https://reepower84-png.github.io/chargebiseo/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 상단 계산기(입력 | 영수증) → 조합 순위 → 충전소 단가 비교 막대 → 단가표 편집. 영수증·계량기 화면의 언어를 빌린다. */
+:root {
+  --bg: #EEF1F6;
+  --surface: #FFFFFF;
+  --paper: #FFFFFF;
+  --ink: #111827;
+  --muted: #586274;
+  --line: #D5DBE5;
+  --accent: #1E4FD6;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E3EAFC;
+  --good: #0B7F57;
+  --good-soft: #DDF3EA;
+  --warn: #9A5B00;
+  --warn-soft: #FBEFD9;
+  --font-display: "Black Han Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D121B; --surface: #151C29; --paper: #192233; --ink: #E7EBF2; --muted: #98A2B5;
+    --line: #2A3447; --accent: #7A9CFF; --accent-ink: #0D121B; --accent-soft: #1E2A47;
+    --good: #43CF95; --good-soft: #14302A; --warn: #F0B860; --warn-soft: #33281A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D121B; --surface: #151C29; --paper: #192233; --ink: #E7EBF2; --muted: #98A2B5;
+  --line: #2A3447; --accent: #7A9CFF; --accent-ink: #0D121B; --accent-soft: #1E2A47;
+  --good: #43CF95; --good-soft: #14302A; --warn: #F0B860; --warn-soft: #33281A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.6; margin: 0;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+.top { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 22px; letter-spacing: .01em; }
+.plug { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; }
+.plug svg { width: 18px; height: 18px; }
+.top nav { display: flex; gap: 16px; font-size: 14px; flex-wrap: wrap; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--ink); }
+
+/* hero */
+.hero { padding-block: 20px 28px; display: grid; gap: 10px; max-width: 760px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
+.hero h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 5vw, 48px); line-height: 1.18; }
+.hero p { color: var(--muted); margin: 0; max-width: 62ch; }
+
+/* calculator */
+.calc { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .calc { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 22px; }
+.step { display: grid; gap: 10px; }
+.step-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.step-n { font-family: var(--font-num); font-size: 12px; color: var(--accent); font-weight: 600; }
+.step-h h3 { font-size: 15px; font-weight: 700; }
+.step-h .seg { margin-left: auto; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+label.f { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.field { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.field input, .field select, select.sel {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink);
+  font: 500 16px var(--font-num); padding: 10px 12px;
+}
+select.sel { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: var(--font-body); font-size: 15px; width: 100%; }
+.field input:focus, .field select:focus, select.sel:focus { outline: none; }
+.field:focus-within, select.sel:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field input.txt { font-family: var(--font-body); font-size: 15px; }
+.unit { padding-right: 12px; color: var(--muted); font: 13px var(--font-num); white-space: nowrap; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.derived { font: 13px var(--font-num); color: var(--ink); background: var(--bg); border-radius: 8px; padding: 8px 12px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.range-row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-on {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 6px 5px 12px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink); font-size: 13.5px;
+}
+.chip-on button {
+  border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 16px; line-height: 1;
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+}
+.chip-on button:hover { background: rgba(255, 255, 255, .2); }
+.add-row { display: flex; gap: 8px; }
+.add-row .field { flex: 1; min-width: 0; }
+.btn-sm {
+  border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 8px;
+  font: 700 14px var(--font-body); padding: 0 14px; cursor: pointer; white-space: nowrap;
+}
+.err { font-size: 12.5px; color: var(--warn); margin: 0; min-height: 0; }
+.mem { display: grid; gap: 8px; }
+.mem-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px dashed var(--line); }
+.mem-row:first-child { border-top: 0; }
+.mem-name { font-size: 14px; }
+.mem-name small { color: var(--muted); margin-left: 6px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: block; padding: 5px 11px; font-size: 12.5px; cursor: pointer; color: var(--muted); white-space: nowrap; }
+.seg label + label span { border-left: 1px solid var(--line); }
+.seg input:checked + span { background: var(--ink); color: var(--surface); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+details.more { border-top: 1px solid var(--line); padding-top: 16px; }
+details.more > summary {
+  cursor: pointer; font-weight: 700; font-size: 14.5px; color: var(--accent); list-style: none;
+  display: flex; align-items: center; gap: 8px;
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "+"; font: 600 16px var(--font-num); width: 18px; }
+details.more[open] > summary::before { content: "−"; }
+details.more > summary small { color: var(--muted); font-weight: 400; }
+.more-body { display: grid; gap: 20px; padding-top: 16px; }
+
+/* receipt */
+.receipt-col { display: grid; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 860px) { .receipt-col { position: static; } }
+.receipt {
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--r) var(--r) 0 0;
+  padding: 22px 22px 26px; font-family: var(--font-num); font-size: 13px; position: relative;
+  -webkit-mask: linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat, radial-gradient(circle 6px at 8px 100%, transparent 6px, #000 6.5px) bottom left/16px 8px repeat-x;
+          mask: linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat, radial-gradient(circle 6px at 8px 100%, transparent 6px, #000 6.5px) bottom left/16px 8px repeat-x;
+}
+.rc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; letter-spacing: .06em; }
+.rc-head .pill { letter-spacing: 0; }
+.save { margin-top: 14px; padding: 16px; border-radius: 8px; background: var(--good-soft); color: var(--good); display: grid; gap: 2px; }
+.save.zero { background: var(--accent-soft); color: var(--accent); }
+.save-l { font-family: var(--font-body); font-size: 13px; font-weight: 500; }
+.save-v { font-size: clamp(30px, 4.4vw, 40px); font-weight: 600; line-height: 1.15; letter-spacing: -.02em; }
+.save-y { font-size: 12.5px; }
+.cmp { margin-top: 14px; display: grid; gap: 6px; }
+.cmp div, .li { display: flex; justify-content: space-between; gap: 12px; }
+.cmp .strike { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.cmp b { font-weight: 600; }
+.calib { margin-top: 10px; font-family: var(--font-body); font-size: 12.5px; padding: 8px 10px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.calib.bad { background: var(--warn-soft); color: var(--warn); }
+.rule { border: 0; border-top: 1px dashed var(--line); margin: 14px 0; }
+.li { padding: 3px 0; }
+.li .d { color: var(--muted); font-size: 11.5px; display: block; }
+.li .d.unk { color: var(--warn); }
+.li .l { min-width: 0; }
+.li .r { white-space: nowrap; text-align: right; }
+.li.minus .r { color: var(--good); }
+.total { display: flex; justify-content: space-between; font-weight: 600; font-size: 15px; }
+.todo { margin-top: 14px; font-family: var(--font-body); display: grid; gap: 6px; font-size: 13.5px; }
+.todo-h { font-weight: 700; }
+.todo ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+.cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.copy-box { display: grid; gap: 6px; }
+.copy-box textarea { width: 100%; min-height: 150px; font: 13px var(--font-body); padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); resize: vertical; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border-radius: 8px;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font: 700 15px var(--font-body);
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.btn.ghost { background: transparent; color: var(--accent); }
+
+/* sections */
+section.blk { padding-block: 56px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.blk-h { display: grid; gap: 6px; max-width: 70ch; }
+.blk-h h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.25; }
+.blk-h p { margin: 0; color: var(--muted); }
+
+/* ranking */
+.rank { display: grid; gap: 10px; }
+.opt {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px;
+}
+.opt.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.opt-n { font: 600 22px var(--font-num); color: var(--muted); }
+.opt.best .opt-n { color: var(--accent); }
+.opt-t { font-weight: 700; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.opt-s { font-size: 13px; color: var(--muted); }
+.pill { font: 600 11px var(--font-body); padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); letter-spacing: .02em; white-space: nowrap; }
+.pill.now { background: var(--warn-soft); color: var(--warn); }
+.opt-r { text-align: right; display: grid; gap: 6px; justify-items: end; }
+.opt-v { font: 600 18px var(--font-num); font-variant-numeric: tabular-nums; }
+.opt-d { font: 12.5px var(--font-num); color: var(--good); }
+.opt-d.neg { color: var(--warn); }
+.opt .btn { padding: 7px 12px; font-size: 13px; }
+@media (max-width: 600px) {
+  .opt { grid-template-columns: 32px minmax(0, 1fr); }
+  .opt-r { grid-column: 1 / -1; justify-items: start; text-align: left; grid-auto-flow: column; align-items: center; justify-content: space-between; }
+}
+
+/* bars */
+.bars-ctl { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.bars-ctl label.f { width: 180px; }
+.bars { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; display: grid; gap: 12px; }
+.bar { display: grid; grid-template-columns: 150px minmax(0, 1fr) 92px; gap: 12px; align-items: center; font-size: 13.5px; }
+.bar-name { min-width: 0; }
+.bar-name small { display: block; color: var(--muted); font-size: 11.5px; }
+.bar.mine .bar-name { font-weight: 700; }
+.track { position: relative; height: 22px; background: var(--bg); border-radius: 5px; }
+.fill-r { position: absolute; inset: 0 auto 0 0; background: var(--line); border-radius: 5px; }
+.fill-m { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 5px; }
+.bar.cheap .fill-m { background: var(--good); }
+.bar-v { text-align: right; font: 500 13.5px var(--font-num); }
+.bar-v small { display: block; color: var(--muted); font-size: 11.5px; }
+.legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; align-items: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.legend .btn-sm { padding: 6px 12px; margin-left: auto; }
+@media (max-width: 520px) { .bar { grid-template-columns: 92px minmax(0, 1fr) 74px; gap: 8px; } }
+
+/* table */
+.banner { display: flex; gap: 10px; align-items: flex-start; background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; }
+.banner a { color: inherit; }
+.banner b { white-space: nowrap; }
+.caution { margin-top: 16px; }
+details.rates > summary { cursor: pointer; font-weight: 700; color: var(--accent); padding: 12px 0; }
+.tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); max-height: 640px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13.5px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .03em; position: sticky; top: 0; background: var(--surface); }
+thead tr:first-child th { color: var(--ink); font-weight: 700; }
+thead tr:nth-child(2) th { top: 33px; }
+tbody tr:last-child td { border-bottom: 0; }
+tr.grp td { background: var(--bg); font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+td input { width: 76px; text-align: right; font: 500 13.5px var(--font-num); padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+td input::placeholder { color: var(--warn); font-family: var(--font-body); font-size: 12px; }
+td .dash { color: var(--muted); }
+.cell-warn { display: block; color: var(--warn); font-size: 11.5px; white-space: normal; max-width: 260px; }
+tr.custom td { background: var(--accent-soft); }
+td input.name-in { text-align: left; }
+.name-in { width: 140px; font: 700 13.5px var(--font-body); padding: 5px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.tbl-act { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.src { display: grid; gap: 8px; }
+.src h3 { font-size: 15px; }
+.src ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--muted); }
+
+/* faq */
+.faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .faq { grid-template-columns: minmax(0, 1fr); } }
+.faq div { border-top: 2px solid var(--ink); padding-top: 12px; }
+.faq h3 { font-size: 16px; margin-bottom: 6px; }
+.faq p { margin: 0; color: var(--muted); font-size: 14px; }
+
+footer { padding-block: 40px 48px; color: var(--muted); font-size: 12.5px; display: grid; gap: 6px; }
+footer p { margin: 0; max-width: 90ch; }
+
+/* 하단 설치·공유 바 */
+body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.dock-in { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; }
+.dock .btn { flex: 1; }
+.dock svg { width: 18px; height: 18px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30;
+  background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 14px; max-width: calc(100% - 32px);
+}
+.sheet-bg { position: fixed; inset: 0; z-index: 40; background: rgba(10, 14, 22, .5); display: grid; align-items: end; }
+.sheet {
+  background: var(--surface); border-radius: 14px 14px 0 0; max-width: 560px; width: 100%; margin: 0 auto;
+  padding: 22px max(20px, env(safe-area-inset-left, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px;
+}
+.sheet h2 { font-size: 18px; }
+.sheet ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; }
+.sheet .note { font-size: 13px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fill-m, .fill-r { transition: width .35s ease; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="plug" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+      충전비서
+    </div>
+    <nav aria-label="바로가기">
+      <a href="#rank">추천 조합</a>
+      <a href="#compare">충전소 단가 비교</a>
+      <a href="#rates">단가표</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <span class="eyebrow">전기차 충전 멤버십 · 카드 계산기</span>
+    <h1>지금 쓰는 카드로 한 달에 얼마 손해 보고 있을까?</h1>
+    <p>한 달에 얼마나 타는지와 자주 가는 충전소만 넣으면, 34개 충전사업자의 회원 단가와 출력별 요금, 카드 할인을 합쳐 가장 싼 조합을 찾아 드립니다.</p>
+    <div class="banner caution" role="note"><b>참고용</b><span>공개 자료에서 모은 단가와 카드 조건으로 계산한 추정치입니다. 요금과 혜택은 자주 바뀌니 결제 전에 사업자 앱과 카드사 안내를 확인하세요. <a href="#rates">출처와 기준일 보기</a></span></div>
+  </div>
+
+  <div class="calc">
+    <form class="panel" id="calcForm" autocomplete="off">
+      <div class="step">
+        <div class="step-h">
+          <span class="step-n">01</span><h3>한 달에 얼마나 타세요?</h3>
+          <span class="seg" role="radiogroup" aria-label="입력 방식">
+            <label><input type="radio" name="mode" id="mode-km" value="km"><span>주행거리로</span></label>
+            <label><input type="radio" name="mode" id="mode-kwh" value="kwh"><span>충전량(kWh)으로</span></label>
+          </span>
+        </div>
+        <div id="kmBox" class="step">
+          <div class="row2">
+            <label class="f">월 주행거리
+              <span class="field"><input id="km" type="number" min="0" step="100" inputmode="numeric"><span class="unit">km</span></span>
+            </label>
+            <label class="f">차종
+              <select id="car" class="sel"></select>
+            </label>
+          </div>
+          <div class="row2">
+            <label class="f">전비 (계기판 평균 전비로 바꾸면 더 정확)
+              <span class="field"><input id="eff" type="number" min="1" max="10" step="0.1" inputmode="decimal"><span class="unit">km/kWh</span></span>
+            </label>
+            <label class="f">집·회사 완속 충전 비율 <span class="num" id="homeOut"></span>
+              <input id="homeShare" type="range" min="0" max="100" step="10">
+              <span class="range-row"><span>밖에서 급속</span><span>집에서 완속</span></span>
+            </label>
+          </div>
+          <p class="derived" id="derived"></p>
+        </div>
+        <div id="kwhBox" class="row2" hidden>
+          <label class="f">월 완속 충전량
+            <span class="field"><input id="slowKwh" type="number" min="0" step="10" inputmode="decimal"><span class="unit">kWh</span></span>
+          </label>
+          <label class="f">월 급속 충전량
+            <span class="field"><input id="fastKwh" type="number" min="0" step="10" inputmode="decimal"><span class="unit">kWh</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-h"><span class="step-n">02</span><h3>어디서 충전하세요?</h3></div>
+        <label class="f">집·아파트 완속 충전기 사업자
+          <select id="slowProv" class="sel"></select>
+        </label>
+        <label class="f" for="provSearch">밖에서 주로 쓰는 급속 충전 사업자 (여러 곳이면 충전량을 똑같이 나눠 계산)</label>
+        <div class="chips" id="fastChips"></div>
+        <div class="add-row">
+          <span class="field"><input id="provSearch" class="txt" list="provList" placeholder="사업자 이름 검색 (예: 채비, 테슬라)"></span>
+          <button type="button" class="btn-sm" id="provAdd">추가</button>
+        </div>
+        <datalist id="provList"></datalist>
+        <p class="err" id="provErr"></p>
+        <p class="hint">목록에 없으면 '기타 사업자'를 추가하고, <a href="#rates">단가표</a>에서 이름과 단가를 그 사업자 앱에 나온 값으로 고쳐 주세요.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-h"><span class="step-n">03</span><h3>지금 쓰는 충전 할인 카드</h3></div>
+        <select id="curCard" class="sel" aria-label="지금 쓰는 충전 할인 카드"></select>
+      </div>
+
+      <details class="more" id="more">
+        <summary>더 정확하게 계산하기 <small>실적·가입 상태·실제 결제액</small></summary>
+        <div class="more-body">
+          <div class="step">
+            <label class="f">지난달 실제 충전 결제액 (사업자 앱 결제 내역 합계)
+              <span class="field"><input id="actual" type="number" min="0" step="1000" inputmode="numeric" placeholder="모르면 비워 두세요"><span class="unit">원</span></span>
+            </label>
+            <p class="hint">넣으면 계산값과 실제 금액의 차이만큼 모든 결과를 보정합니다.</p>
+          </div>
+          <div class="step">
+            <label class="f">급속 중 100kW 이상 초급속 비율 <span class="num" id="ultraOut"></span>
+              <input id="ultraShare" type="range" min="0" max="100" step="10">
+              <span class="range-row"><span>50kW 위주</span><span>초급속 위주</span></span>
+            </label>
+          </div>
+          <div class="step">
+            <span class="f">지금 가입한 충전 멤버십</span>
+            <div class="mem" id="curMem"></div>
+            <p class="hint">회원이 아니면 비회원(로밍) 단가가 붙습니다. 비회원 단가가 공개되지 않은 곳은 회원가로 계산하고 영수증에 표시합니다.</p>
+          </div>
+          <div class="row2">
+            <label class="f">전월 카드 사용액
+              <select id="spend" class="sel"></select>
+            </label>
+            <label class="f">카드 할인이 되는 충전 비율 <span class="num" id="shareOut"></span>
+              <input id="cardShare" type="range" min="0" max="100" step="10">
+              <span class="range-row"><span>일부만</span><span>전부</span></span>
+            </label>
+          </div>
+          <p class="hint">충전 할인 카드는 대부분 카드사와 제휴한 충전기에서만 할인됩니다. 모르면 기본값 50%로 두세요. 실적 구간별 할인율이 공개되지 않은 중간 구간은 가장 낮은 할인율로 계산합니다.</p>
+        </div>
+      </details>
+    </form>
+
+    <div class="receipt-col">
+      <div class="receipt" aria-live="polite">
+        <div class="rc-head"><span>충전비서 · 월 정산 예상</span><span><span class="pill now" id="exPill">예시 값</span> <span id="rcDate"></span></span></div>
+        <div class="save" id="saveBox">
+          <span class="save-l" id="saveLabel">추천 조합으로 바꾸면 한 달에</span>
+          <span class="save-v" id="saveVal">0원</span>
+          <span class="save-y" id="saveYear"></span>
+        </div>
+        <div class="cmp">
+          <div><span>지금 조합</span><span class="strike" id="curTotal"></span></div>
+          <div><span>추천 조합</span><b id="bestTotal"></b></div>
+        </div>
+        <div class="calib" id="calib" hidden></div>
+        <hr class="rule">
+        <div id="lines"></div>
+        <hr class="rule">
+        <div class="total"><span id="totalLabel">월 예상 지불액</span><span id="bestTotal2"></span></div>
+        <div class="todo" id="todo"></div>
+      </div>
+      <div class="cta-row">
+        <button type="button" class="btn" id="copyBtn">결과 복사하기</button>
+        <a class="btn ghost" id="mainCta" href="#rank">추천 조합 보기</a>
+      </div>
+      <p class="note" id="copyMsg" role="status"></p>
+      <div class="copy-box" id="copyBox" hidden>
+        <label class="note" for="copyText">자동 복사가 안 되는 환경입니다. 아래 글을 길게 눌러 복사하세요.</label>
+        <textarea id="copyText" readonly></textarea>
+      </div>
+      <p class="note">카드 할인은 전월 사용액 구간의 할인율을 제휴 충전 비율만큼에만 적용해 보수적으로 계산했습니다.</p>
+    </div>
+  </div>
+
+  <section class="blk" id="rank">
+    <div class="blk-h">
+      <h2>카드별로 찾은 가장 싼 조합</h2>
+      <p>자주 가는 충전소의 무료 회원 가입을 전제로, 할인 카드마다 월 지불액을 계산해 싼 순서로 줄 세웠습니다.</p>
+    </div>
+    <div class="rank" id="rankList"></div>
+  </section>
+
+  <section class="blk" id="compare">
+    <div class="blk-h">
+      <h2>같은 양을 충전하면 어디가 얼마?</h2>
+      <p>휴게소 충전기 앞에서 고민될 때 보는 화면입니다. 회원가 기준으로 싼 순서이고, 굵은 글씨는 내가 고른 사업자입니다.</p>
+    </div>
+    <div class="bars-ctl">
+      <label class="f">충전량
+        <span class="field"><input id="cmpKwh" type="number" min="1" step="5" inputmode="decimal"><span class="unit">kWh</span></span>
+      </label>
+      <label class="f">충전기 출력
+        <select id="cmpTier" class="sel">
+          <option value="fast">급속</option>
+          <option value="ultra">초급속 (100kW 이상)</option>
+          <option value="slow">완속</option>
+        </select>
+      </label>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>회원가</span><span><i style="background:var(--line)"></i>비회원가(공개된 곳만)</span><span><i style="background:var(--good)"></i>가장 싼 곳</span>
+      <button type="button" class="btn-sm" id="cmpToggle"></button>
+    </div>
+  </section>
+
+  <section class="blk" id="rates">
+    <div class="blk-h">
+      <h2>사업자별 단가표</h2>
+      <p>단위는 원/kWh입니다. 칸을 고치면 위 계산이 바로 바뀌고, 고친 값은 이 브라우저에 저장됩니다.</p>
+    </div>
+    <div class="banner" role="note"><b>확인 필요</b><span>공식 페이지로 확인한 3곳 외에는 차지인포(한국스마트그리드협회)가 공개한 요금입니다. 사업자마다 요금을 정한 날짜가 달라 이후에 오른 요금은 빠져 있을 수 있습니다. 비회원 단가를 공개하지 않은 곳은 '미확인'으로 두었습니다.</span></div>
+    <details class="rates" id="rateDetails">
+      <summary>34개 사업자 단가표 펼치기 · 고치기</summary>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th rowspan="2">사업자</th><th colspan="2">완속</th><th colspan="2">급속</th><th colspan="2">초급속 100kW+</th></tr>
+            <tr><th>회원</th><th>비회원</th><th>회원</th><th>비회원</th><th>회원</th><th>비회원</th></tr>
+          </thead>
+          <tbody id="rateBody"></tbody>
+        </table>
+      </div>
+      <div class="tbl-act">
+        <button type="button" class="btn ghost" id="resetRates">처음 단가로 되돌리기</button>
+        <span class="note" id="rateSaved"></span>
+      </div>
+    </details>
+    <div class="src">
+      <h3>출처와 기준일</h3>
+      <ul id="sources"></ul>
+    </div>
+  </section>
+
+  <section class="blk">
+    <div class="blk-h"><h2>충전요금이 왜 이렇게 다를까</h2></div>
+    <div class="faq">
+      <div><h3>회원가와 비회원 요금</h3><p>사업자 앱이나 카드에 가입한 회원은 회원가를, 다른 사업자 카드로 충전하면 로밍(비회원) 요금을 냅니다. SK일렉링크처럼 kWh당 200원 가까이 차이 나는 곳도 있습니다.</p></div>
+      <div><h3>출력이 높을수록 비싸다</h3><p>2026년 8월 공공 충전요금 개편으로 출력 구간이 5단계로 나뉘었습니다. 30kW 미만 완속은 내리고 200kW 이상 초급속은 올렸습니다.</p></div>
+      <div><h3>카드 할인에는 한도가 있다</h3><p>충전요금 할인 카드도 월 할인 한도와 전월 실적 조건이 붙고, 제휴 충전기에서만 할인되는 경우가 많습니다. 실적이 안 되면 연회비만 나갑니다.</p></div>
+      <div><h3>전비는 계절마다 달라진다</h3><p>겨울에는 히터와 배터리 온도 때문에 전비가 20% 안팎 떨어집니다. 계기판의 최근 평균 전비를 넣으면 계산이 가장 정확해집니다.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>충전비서</b> · 전기차 충전 멤버십·카드 계산기</p>
+    <p id="affNote" hidden>카드 발급·멤버십 가입 버튼 일부는 제휴 링크이며, 이용 시 충전비서가 수수료를 받을 수 있습니다. 추천 순위는 수수료와 관계없이 계산된 월 지불액 순서입니다.</p>
+    <p>표시된 단가와 할인 조건은 2026년 10월 26일에 공개 자료에서 모은 값으로, 실제와 다를 수 있습니다. 충전비서는 계산 결과로 생긴 손해를 책임지지 않습니다. 입력한 값은 이 브라우저에만 저장되고 어디로도 전송되지 않습니다.</p>
+  </footer>
+</div>
+
+<div class="dock" role="region" aria-label="설치와 공유">
+  <div class="dock-in">
+    <button type="button" class="btn ghost" id="installBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>앱 설치</button>
+    <button type="button" class="btn" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4m0-11-6.8 4"/></svg>공유하기</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="sheet-bg" id="installSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <h2 id="installTitle">홈 화면에 충전비서 추가하기</h2>
+    <div id="installSteps"></div>
+    <p class="note">설치하면 앱처럼 아이콘으로 바로 열리고, 인터넷이 약해도 마지막으로 본 화면이 열립니다.</p>
+    <button type="button" class="btn" id="installClose">확인</button>
+  </div>
+</div>
+
+<script src="data/chargeinfo.js"></script>
+<script>
+(function () {
+  // 제휴 링크: 카드사·제휴마케팅 플랫폼에서 받은 URL을 넣으면 발급 버튼이 켜집니다.
+  var AFFILIATE = { shinhan: "", ibk: "", samsung: "" };
+
+  /* ---------- 데이터 ---------- */
+  // 단가: [회원가, 비회원가] 원/kWh. 비회원가가 공개되지 않은 곳은 null.
+  // slow = 완속, fast = 급속, ultra = 100kW 이상.
+  // 차지인포 값은 data/chargeinfo.js(scripts/update-chargeinfo.mjs가 매달 갱신)에서 읽는다. 급속 하나만 공개돼 ultra에 같은 값을 쓴다.
+  var CI = window.CHARGEINFO || { fetchedAt: "", source: "https://chargeinfo.ksga.org/index", providers: [] };
+  var CI_URL = CI.source;
+  // 공식 페이지로 확인한 사업자. 차지인포 값보다 우선하고, 비어 있는 비회원가만 차지인포 값으로 채운다.
+  var OFFICIAL = [
+    { id: "gov", ciBid: "ME", name: "환경부 공공", group: "official", note: "2026.08 개편 단가", asOf: "2026.08.01", src: "기후에너지환경부 개편 확정안(2차 정리 글)", srcUrl: "https://www.taplog.kr/2026/10/evcharging.html",
+      warn: "비회원가 미공개. 차지인포에는 개편 전 값(급속 347·완속 324)이 올라 있음", slow: [295.0, null], fast: [325.6, null], ultra: [348.4, null] },
+    { id: "gs", ciBid: "PI", name: "GS차지비", group: "official", note: "2026.08 공식", asOf: "2026.08.01", src: "GS차지비 요금 안내", srcUrl: "https://www.gschargev.co.kr/pricing.html",
+      warn: "비회원가는 차지인포 값(2025.08 적용)", slow: [295, null], fast: [325, null], ultra: [345, null] },
+    { id: "sk", ciBid: "ST", name: "SK일렉링크", group: "official", note: "2026.05 공식", asOf: "2026.05.21", src: "SK일렉링크 멤버십 요금 안내(일반 생활권)", srcUrl: "https://skelectlink.co.kr/membership/charge",
+      warn: "100kW 이상 단가는 원문 표가 불분명해 급속 단가 적용", slow: [295, 590], fast: [391, 590], ultra: [391, 590] }
+  ];
+  var ETC = { id: "etc", name: "기타 사업자", group: "custom", custom: true, note: "직접 입력", asOf: "직접 입력", src: "기본값: 민간 충전소 일반 단가 범위(블로그 정리)", srcUrl: "https://web.getcha.kr/blog/2026-electric-vehicle-charging-cost-comparison-guide",
+    warn: "기본값은 민간 평균 범위입니다. 쓰는 사업자 앱에서 확인한 단가로 고쳐 주세요", slow: [300, null], fast: [350, null], ultra: [400, null] };
+
+  function buildProviders() {
+    var ciMap = {};
+    CI.providers.forEach(function (c) { ciMap[c.bid] = c; });
+    var list = OFFICIAL.map(function (o) {
+      var p = clone(o), c = ciMap[o.ciBid];
+      if (c) ["slow", "fast", "ultra"].forEach(function (t) {
+        var s = c[t === "ultra" ? "fast" : t];
+        if (p[t] && p[t][1] == null && s && s[1] != null) p[t][1] = s[1];
+      });
+      return p;
+    });
+    CI.providers.forEach(function (c) {
+      if (OFFICIAL.some(function (o) { return o.ciBid === c.bid; })) return;
+      list.push({ id: c.bid.toLowerCase(), name: c.name, group: "ci", note: c.asOf + " 적용", asOf: c.asOf,
+        slow: c.slow ? c.slow.slice() : null, fast: c.fast ? c.fast.slice() : null, ultra: c.fast ? c.fast.slice() : null });
+    });
+    list.push(clone(ETC));
+    // 사용자가 단가표에서 고친 값을 덮어쓴다.
+    var ov = state.overrides || {};
+    list.forEach(function (p) {
+      var o = ov[p.id];
+      if (!o) return;
+      if (o.name) p.name = o.name;
+      ["slow", "fast", "ultra"].forEach(function (t) { if (o[t] && p[t]) p[t] = o[t].slice(); });
+    });
+    return list;
+  }
+  var GROUPS = { official: "공식 페이지로 확인한 사업자", ci: "차지인포 회원 단가", custom: "직접 입력" };
+
+  // 할인율은 전월 실적 구간별(단위 만원). 공개 자료에 구간별 할인율이 없는 중간 구간은 최저 할인율로 둔다.
+  // 연회비는 최저 금액 기준. 할인은 state.cardShare 비율의 충전에만 적용한다.
+  var CARDS = [
+    { id: "none", name: "할인 카드 없음", tiers: [], cap: 0, fee: 0, req: "" },
+    { id: "shinhan", name: "신한 EV 카드", tiers: [{ min: 30, pct: 0.3 }, { min: 100, pct: 0.5 }], cap: 20000, fee: 12000, req: "30~50% 할인, 제휴 충전기 한정" },
+    { id: "ibk", name: "IBK 어디로든 그린카드", tiers: [{ min: 30, pct: 0.2 }, { min: 60, pct: 0.4 }], cap: 20000, fee: 15000, req: "20~40% 포인트 적립, 제휴 충전소 한정" },
+    { id: "samsung", name: "삼성 iD ENERGY 카드", tiers: [{ min: 50, pct: 0.1 }], cap: 5000, fee: 20000, req: "10% 할인, 한도는 대중교통·택시와 공유" }
+  ];
+  var CARD_SRC = { asOf: "2025.12 수정 글", src: "뱅크샐러드 할인카드 정리", srcUrl: "https://www.banksalad.com/articles/%EC%A0%84%EA%B8%B0%EC%B0%A8-%EC%B6%A9%EC%A0%84%EC%9A%94%EA%B8%88-%EB%B9%84%EA%B5%90-%ED%95%A0%EC%9D%B8-%EC%B9%B4%EB%93%9C" };
+  var SPEND = [[0, "30만원 미만"], [30, "30만원 이상"], [50, "50만원 이상"], [60, "60만원 이상"], [100, "100만원 이상"]];
+
+  // 대표 트림 복합 공인전비 근사값(km/kWh). 계기판 평균 전비로 바꾸면 더 정확하다.
+  var CARS = [
+    ["ioniq5", "현대 아이오닉 5 (롱레인지 2WD)", 5.2], ["ioniq6", "현대 아이오닉 6 (롱레인지 2WD)", 6.0],
+    ["kona", "현대 코나 일렉트릭", 5.5], ["casper", "현대 캐스퍼 일렉트릭", 5.6], ["porter", "현대 포터 II 일렉트릭", 3.1],
+    ["ev3", "기아 EV3", 5.6], ["ev6", "기아 EV6 (롱레인지 2WD)", 5.2], ["ev9", "기아 EV9", 4.2],
+    ["niro", "기아 니로 EV", 5.3], ["ray", "기아 레이 EV", 5.1], ["gv60", "제네시스 GV60", 4.9],
+    ["model3", "테슬라 모델 3", 5.9], ["modely", "테슬라 모델 Y", 5.5], ["custom", "직접 입력", null]
+  ];
+  var LOSS = 1.1; // 충전 손실 약 10%: 결제되는 kWh는 배터리에 들어간 양보다 많다.
+  var MAX_FAST = 6;
+
+  var DEFAULT_STATE = {
+    mode: "km", km: 1500, car: "ioniq5", eff: 5.2, homeShare: 60, slowKwh: 180, fastKwh: 120,
+    slowProv: "gs", fastProvs: ["gov", "sk", "cv"], levels: {}, card: "none",
+    ultraShare: 30, spend: 30, cardShare: 50, actual: 0,
+    cmpKwh: 30, cmpTier: "fast", cmpAll: false, touched: false, overrides: {}
+  };
+  var KEY = "chargebiseo-v6";
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  var state = clone(DEFAULT_STATE);
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && saved.state) state = Object.assign(state, saved.state);
+  } catch (e) {}
+  var providers = buildProviders();
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify({ state: state })); } catch (e) {}
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  function won(x) { return Math.round(x).toLocaleString("ko-KR") + "원"; }
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function prov(id) { for (var i = 0; i < providers.length; i++) if (providers[i].id === id) return providers[i]; return null; }
+  function card(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i]; return CARDS[0]; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var TIER = { slow: "완속", fast: "급속", ultra: "초급속" };
+
+  function spendLabel(v) { for (var i = SPEND.length - 1; i >= 0; i--) if (v >= SPEND[i][0]) return SPEND[i][1]; return SPEND[0][1]; }
+  function cardPct(c) {
+    var pct = 0;
+    c.tiers.forEach(function (t) { if (state.spend >= t.min) pct = t.pct; });
+    return pct;
+  }
+  function cardRule(c) {
+    if (!c.tiers.length) return "";
+    var pct = cardPct(c);
+    if (!pct) return "전월 " + c.tiers[0].min + "만원 미만이라 할인 없음";
+    return "전월 " + spendLabel(state.spend) + " 기준 " + Math.round(pct * 100) + "%";
+  }
+
+  /* ---------- 계산 ---------- */
+  function kwh() {
+    if (state.mode === "kwh") return { slow: state.slowKwh, fast: state.fastKwh };
+    var eff = state.eff > 0 ? state.eff : 5;
+    var total = state.km / eff * LOSS, home = state.homeShare / 100;
+    return { slow: total * home, fast: total * (1 - home) };
+  }
+  function fastIds() { return state.fastProvs.filter(function (id) { var p = prov(id); return p && p.fast; }); }
+  function usedIds() {
+    var ids = [], k = kwh(), sp = prov(state.slowProv);
+    if (k.slow > 0 && sp && sp.slow) ids.push(sp.id);
+    if (k.fast > 0) fastIds().forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+    return ids;
+  }
+  // level: 0 비회원, 1 회원. 가입 상태를 따로 고르지 않은 사업자는 회원으로 본다.
+  function levelOf(levels, id) { return levels[id] == null ? 1 : levels[id]; }
+  function unit(p, tier, lvl) {
+    var t = p[tier];
+    if (!t) return null;
+    if (lvl >= 1 || t[1] == null) return { u: t[0], unk: lvl < 1 && t[1] == null };
+    return { u: t[1], unk: false };
+  }
+
+  function calc(levels, cardId) {
+    var k = kwh(), lines = [], sub = 0, fees = 0, unk = false;
+    function add(p, tier, amount, lvl) {
+      if (amount <= 0) return;
+      var r = unit(p, tier, lvl);
+      if (!r) return;
+      if (r.unk) unk = true;
+      var tag = lvl >= 1 ? "" : r.unk ? " · 비회원" : " · 비회원가";
+      lines.push({ label: p.name + " " + TIER[tier] + tag, detail: r1(amount) + "kWh × " + r.u + "원" + (r.unk ? " (비회원가 미확인, 회원가로 계산)" : ""), unk: r.unk, cost: amount * r.u });
+    }
+    var sp = prov(state.slowProv);
+    if (sp && sp.slow) add(sp, "slow", k.slow, levelOf(levels, sp.id));
+    var fp = fastIds();
+    if (k.fast > 0 && fp.length) {
+      var each = k.fast / fp.length, us = state.ultraShare / 100;
+      fp.forEach(function (id) {
+        var p = prov(id), lv = levelOf(levels, id);
+        add(p, "fast", each * (1 - us), lv);
+        add(p, "ultra", each * us, lv);
+      });
+    }
+    lines.forEach(function (l) { sub += l.cost; });
+    var c = card(cardId), pct = cardPct(c);
+    var disc = Math.min(sub * (state.cardShare / 100) * pct, c.cap);
+    if (disc > 0) lines.push({ label: c.name + " 할인", detail: Math.round(pct * 100) + "% × 적용 비율 " + state.cardShare + "% · 월 한도 " + won(c.cap), cost: -disc, minus: true });
+    if (c.fee) { fees += c.fee / 12; lines.push({ label: c.name + " 연회비(월 환산)", detail: "연 " + won(c.fee) + " ÷ 12", cost: c.fee / 12 }); }
+    return { lines: lines, total: sub + fees - disc, card: cardId, levels: levels, unk: unk };
+  }
+
+  function currentLevels() {
+    var lv = {};
+    usedIds().forEach(function (id) { lv[id] = levelOf(state.levels, id); });
+    return lv;
+  }
+  // 무료 멤버십은 회원가가 비회원가보다 비싸지 않으므로, 쓰는 사업자는 모두 가입하는 것이 최적이다.
+  function bestLevels() {
+    var lv = {};
+    usedIds().forEach(function (id) { lv[id] = 1; });
+    return lv;
+  }
+  function ranked() {
+    var lv = bestLevels();
+    return CARDS.map(function (c) { return calc(lv, c.id); }).sort(function (a, b) { return a.total - b.total; });
+  }
+  // 실제 결제액을 넣으면 계산값 대비 비율로 모든 금액을 보정한다. 0.5~2배를 벗어나면 입력 오류로 보고 보정하지 않는다.
+  function calibration(cur) {
+    if (!(state.actual > 0) || !(cur.total > 0)) return { f: 1, on: false };
+    var f = state.actual / cur.total;
+    return { f: f, on: f >= 0.5 && f <= 2, bad: f < 0.5 || f > 2 };
+  }
+
+  function todoList(best) {
+    var items = [];
+    Object.keys(best.levels).forEach(function (id) {
+      if (levelOf(state.levels, id) === 0) items.push(prov(id).name + " 무료 회원 가입");
+    });
+    if (best.card !== state.card) {
+      var c = card(best.card);
+      items.push(best.card === "none" ? "충전 할인 카드는 지금 조건에서 손해라 해지 검토" : c.name + " 발급 (" + cardRule(c) + ", " + c.req + ")");
+    }
+    return items;
+  }
+
+  /* ---------- 입력 화면 ---------- */
+  function provOptions(filter) {
+    var html = "", groups = {};
+    providers.filter(filter).forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+    ["official", "ci", "custom"].forEach(function (g) {
+      if (!groups[g]) return;
+      html += '<optgroup label="' + esc(GROUPS[g]) + '">' + groups[g].map(function (p) {
+        return '<option value="' + p.id + '">' + esc(p.name) + "</option>";
+      }).join("") + "</optgroup>";
+    });
+    return html;
+  }
+
+  function renderStatic() {
+    $("car").innerHTML = CARS.map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + (c[2] ? " · " + c[2] : "") + "</option>"; }).join("");
+    $("curCard").innerHTML = CARDS.map(function (c) {
+      return '<option value="' + c.id + '">' + esc(c.name) + (c.cap ? " · 월 한도 " + won(c.cap) : "") + "</option>";
+    }).join("");
+    $("spend").innerHTML = SPEND.map(function (s) { return '<option value="' + s[0] + '">' + s[1] + "</option>"; }).join("");
+  }
+
+  function renderValues() {
+    $("mode-km").checked = state.mode === "km";
+    $("mode-kwh").checked = state.mode === "kwh";
+    $("kmBox").hidden = state.mode !== "km";
+    $("kwhBox").hidden = state.mode !== "kwh";
+    $("km").value = state.km;
+    $("car").value = state.car;
+    $("eff").value = state.eff;
+    $("homeShare").value = state.homeShare;
+    $("homeOut").textContent = state.homeShare + "%";
+    $("slowKwh").value = state.slowKwh;
+    $("fastKwh").value = state.fastKwh;
+    $("curCard").value = state.card;
+    $("actual").value = state.actual > 0 ? state.actual : "";
+    $("ultraShare").value = state.ultraShare;
+    $("ultraOut").textContent = state.ultraShare + "%";
+    $("spend").value = state.spend;
+    $("cardShare").value = state.cardShare;
+    $("shareOut").textContent = state.cardShare + "%";
+    $("cmpKwh").value = state.cmpKwh;
+    $("cmpTier").value = state.cmpTier;
+  }
+
+  function renderProvUI() {
+    $("slowProv").innerHTML = provOptions(function (p) { return p.slow; });
+    $("slowProv").value = state.slowProv;
+    $("fastChips").innerHTML = fastIds().map(function (id) {
+      var p = prov(id);
+      return '<span class="chip-on">' + esc(p.name) + '<button type="button" data-remove="' + id + '" aria-label="' + esc(p.name) + ' 빼기">×</button></span>';
+    }).join("") || '<span class="hint">아직 고른 급속 사업자가 없습니다.</span>';
+    $("provList").innerHTML = providers.filter(function (p) { return p.fast && state.fastProvs.indexOf(p.id) < 0; })
+      .map(function (p) { return '<option value="' + esc(p.name) + '"></option>'; }).join("");
+    var ids = usedIds();
+    $("curMem").innerHTML = ids.length ? ids.map(function (id) {
+      var p = prov(id), lv = levelOf(state.levels, id);
+      return '<div class="mem-row"><span class="mem-name">' + esc(p.name) + "<small>" + esc(p.note) + '</small></span><span class="seg" role="radiogroup" aria-label="' + esc(p.name) + ' 가입 상태">' +
+        [[0, "미가입"], [1, "회원"]].map(function (o) {
+          return '<label><input type="radio" name="lv-' + id + '" id="lv-' + id + "-" + o[0] + '" value="' + o[0] + '"' + (lv === o[0] ? " checked" : "") + "><span>" + o[1] + "</span></label>";
+        }).join("") + "</span></div>";
+    }).join("") : '<p class="hint">충전량과 사업자를 고르면 여기에 나옵니다.</p>';
+  }
+
+  function renderDerived() {
+    var k = kwh();
+    $("derived").textContent = "→ 한 달 약 " + r1(k.slow + k.fast) + "kWh 충전 (완속 " + r1(k.slow) + " · 급속 " + r1(k.fast) + ", 충전 손실 10% 포함)";
+  }
+
+  /* ---------- 결과 화면 ---------- */
+  var last = null;
+  function renderResult() {
+    var list = ranked(), best = list[0];
+    var cur = calc(currentLevels(), state.card);
+    var cal = calibration(cur), f = cal.on ? cal.f : 1;
+    var curT = cur.total * f, bestT = best.total * f;
+    var saving = Math.max(0, curT - bestT);
+    last = { list: list, best: best, cur: cur, f: f, curT: curT, bestT: bestT, saving: saving };
+
+    var d = new Date();
+    $("rcDate").textContent = d.getFullYear() + "." + String(d.getMonth() + 1).padStart(2, "0");
+    $("exPill").hidden = !!state.touched;
+    $("saveBox").className = "save" + (saving < 1 ? " zero" : "");
+    $("saveLabel").textContent = curT < 1 ? "주행거리나 충전량을 넣으면 계산합니다" : saving < 1 ? "지금 조합이 이미 가장 쌉니다" : "추천 조합으로 바꾸면 한 달에";
+    $("saveVal").textContent = saving < 1 ? won(curT) : won(saving) + " 절약";
+    $("saveYear").textContent = saving < 1 ? "월 예상 지불액" : "1년이면 " + won(saving * 12);
+    $("curTotal").textContent = won(curT);
+    $("bestTotal").textContent = won(bestT);
+    $("bestTotal2").textContent = won(bestT);
+    $("totalLabel").textContent = cal.on ? "월 예상 지불액 (보정)" : "월 예상 지불액";
+
+    var cb = $("calib");
+    if (cal.on) {
+      var pct = Math.round((cal.f - 1) * 100);
+      cb.hidden = false; cb.className = "calib";
+      cb.textContent = "실제 결제액 " + won(state.actual) + " 기준으로 보정했습니다. 계산값보다 " + (pct >= 0 ? pct + "% 많아" : -pct + "% 적어") + " 모든 금액에 같은 비율을 곱했습니다. 아래 항목은 보정 전 금액입니다.";
+    } else if (cal.bad) {
+      cb.hidden = false; cb.className = "calib bad";
+      cb.textContent = "실제 결제액이 계산값의 " + (Math.round(cal.f * 10) / 10) + "배라 보정하지 않았습니다. 주행거리, 전비, 충전소 선택을 확인해 주세요.";
+    } else if (cur.unk) {
+      cb.hidden = false; cb.className = "calib bad";
+      cb.textContent = "미가입으로 고른 사업자 중 비회원 단가가 공개되지 않은 곳은 회원가로 계산했습니다. 실제 지금 요금은 이보다 높을 수 있습니다.";
+    } else cb.hidden = true;
+
+    $("lines").innerHTML = best.lines.length ? best.lines.map(function (l) {
+      return '<div class="li' + (l.minus ? " minus" : "") + '"><span class="l">' + esc(l.label) + (l.detail ? '<span class="d' + (l.unk ? " unk" : "") + '">' + esc(l.detail) + "</span>" : "") +
+        '</span><span class="r">' + (l.minus ? "−" + won(-l.cost) : won(l.cost)) + "</span></div>";
+    }).join("") : '<p class="note">주행거리와 충전소를 고르면 항목이 표시됩니다.</p>';
+
+    var todo = todoList(best);
+    $("todo").innerHTML = todo.length
+      ? '<span class="todo-h">이렇게 바꾸세요</span><ul>' + todo.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>"
+      : '<span class="todo-h">바꿀 것이 없습니다</span>';
+
+    var mainC = card(best.card), cta = $("mainCta");
+    if (best.card !== "none" && best.card !== state.card && AFFILIATE[best.card]) {
+      cta.href = AFFILIATE[best.card]; cta.target = "_blank"; cta.rel = "sponsored noopener";
+      cta.textContent = mainC.name + " 발급 안내";
+    } else {
+      cta.href = "#rank"; cta.removeAttribute("target"); cta.textContent = "추천 조합 보기";
+    }
+
+    $("rankList").innerHTML = list.map(function (r, i) {
+      var c = card(r.card), t = r.total * f, diff = curT - t, link = AFFILIATE[r.card];
+      var mem = Object.keys(r.levels).map(function (id) { return prov(id).name; });
+      var btn = r.card !== "none" && link ? '<a class="btn ghost" href="' + esc(link) + '" target="_blank" rel="sponsored noopener">발급 안내</a>' : "";
+      return '<div class="opt' + (i === 0 ? " best" : "") + '"><span class="opt-n">' + (i + 1) + '</span><div><div class="opt-t">' + esc(c.name) +
+        (i === 0 ? '<span class="pill">최저가</span>' : "") + (r.card === state.card ? '<span class="pill now">지금 카드</span>' : "") + '</div><div class="opt-s">' +
+        (mem.length ? "회원 가입: " + esc(mem.join(", ")) : "") + (c.req ? " · " + esc(cardRule(c)) + " · " + esc(c.req) : "") + '</div></div><div class="opt-r"><span class="opt-v">' + won(t) +
+        '</span><span class="opt-d' + (diff < -0.5 ? " neg" : "") + '">' + (Math.abs(diff) < 1 ? "지금과 같음" : diff > 0 ? "월 " + won(diff) + " 절약" : "월 " + won(-diff) + " 더 냄") + "</span>" + btn + "</div></div>";
+    }).join("");
+  }
+
+  function renderBars() {
+    var tier = state.cmpTier, k = Math.max(0, state.cmpKwh || 0), mine = usedIds();
+    var rows = providers.filter(function (p) { return p[tier]; }).sort(function (a, b) { return a[tier][0] - b[tier][0]; });
+    var total = rows.length;
+    if (!state.cmpAll) {
+      rows = rows.filter(function (p, i) { return i < 8 || mine.indexOf(p.id) >= 0; });
+    }
+    $("cmpToggle").textContent = state.cmpAll ? "싼 곳 8개만 보기" : total + "곳 전체 보기";
+    if (!rows.length) { $("bars").innerHTML = '<p class="note">이 출력의 단가가 등록된 사업자가 없습니다.</p>'; return; }
+    var max = 0, min = Infinity;
+    rows.forEach(function (p) { max = Math.max(max, p[tier][0], p[tier][1] || 0); min = Math.min(min, p[tier][0]); });
+    $("bars").innerHTML = rows.map(function (p) {
+      var m = p[tier][0], r = p[tier][1];
+      return '<div class="bar' + (m === min ? " cheap" : "") + (mine.indexOf(p.id) >= 0 ? " mine" : "") + '"><span class="bar-name">' + esc(p.name) + "<small>" + m + "원/kWh</small></span>" +
+        '<span class="track">' + (r ? '<span class="fill-r" style="width:' + (r / max * 100).toFixed(1) + '%"></span>' : "") +
+        '<span class="fill-m" style="width:' + (m / max * 100).toFixed(1) + '%"></span></span>' +
+        '<span class="bar-v">' + won(m * k) + (r ? "<small>비회원 " + won(r * k) + "</small>" : "") + "</span></div>";
+    }).join("");
+  }
+
+  function renderRates() {
+    function cell(p, tier, i) {
+      if (!p[tier]) return '<td><span class="dash">—</span></td>';
+      var v = p[tier][i];
+      return '<td><input type="number" step="0.1" min="0" id="r-' + p.id + "-" + tier + "-" + i + '" data-p="' + p.id + '" data-t="' + tier + '" data-i="' + i + '" value="' + (v == null ? "" : v) + '"' +
+        (i ? ' placeholder="미확인"' : "") + ' aria-label="' + esc(p.name) + " " + TIER[tier] + (i ? " 비회원" : " 회원") + '"></td>';
+    }
+    var html = "", group = "";
+    providers.forEach(function (p) {
+      if (p.group !== group) { group = p.group; html += '<tr class="grp"><td colspan="7">' + esc(GROUPS[group]) + "</td></tr>"; }
+      var nameCell = p.custom
+        ? '<input type="text" class="name-in" id="r-' + p.id + '-name" data-p="' + p.id + '" data-t="name" value="' + esc(p.name) + '" maxlength="20" placeholder="사업자 이름" aria-label="기타 사업자 이름">'
+        : "<b>" + esc(p.name) + "</b>";
+      html += "<tr" + (p.custom ? ' class="custom"' : "") + "><td>" + nameCell + ' <span class="dash">' + esc(p.note) + "</span>" +
+        (p.warn ? '<span class="cell-warn">' + esc(p.warn) + "</span>" : "") + "</td>" +
+        cell(p, "slow", 0) + cell(p, "slow", 1) + cell(p, "fast", 0) + cell(p, "fast", 1) + cell(p, "ultra", 0) + cell(p, "ultra", 1) + "</tr>";
+    });
+    $("rateBody").innerHTML = html;
+  }
+
+  function renderSources() {
+    var items = providers.filter(function (p) { return p.group === "official"; }).map(function (p) {
+      return "<li><b>" + esc(p.name) + "</b> · 기준 " + esc(p.asOf) + ' · <a href="' + esc(p.srcUrl) + '" target="_blank" rel="noopener">' + esc(p.src) + "</a></li>";
+    });
+    var n = providers.filter(function (p) { return p.group === "ci"; }).length;
+    items.push('<li><b>나머지 ' + n + '곳</b> · <a href="' + esc(CI_URL) + '" target="_blank" rel="noopener">차지인포(한국스마트그리드협회) 공개 요금 데이터</a> · ' + esc(CI.fetchedAt || "수집 전") +
+      ' 수집. 사업자마다 요금 적용 시작일을 단가표에 적었습니다. 대부분 2025년 8월에 정한 요금이라 이후 인상분이 빠졌을 수 있습니다. 급속 한 가지 값만 있어 초급속에도 같은 값을 썼습니다. 매달 자동으로 다시 수집합니다.</li>');
+    items.push('<li><b>차종 전비</b> · 대표 트림의 복합 공인전비 근사값입니다. 트림·연식·계절에 따라 다르니 계기판 평균 전비로 바꿔 쓰세요. 충전 손실 10%를 더해 계산합니다.</li>');
+    items.push("<li><b>할인 카드</b> · " + esc(CARD_SRC.asOf) + ' · <a href="' + esc(CARD_SRC.srcUrl) + '" target="_blank" rel="noopener">' + esc(CARD_SRC.src) + "</a>. 카드사 공식 페이지로 확인하지 않았습니다.</li>");
+    var etc = prov("etc");
+    if (etc) items.push("<li><b>" + esc(etc.name) + "</b> · " + esc(etc.src) + "</li>");
+    items.push("<li>기후에너지환경부의 가을철 주말 낮 시간 공공 급속 할인(2026.9.5~10.31, 최대 32%)은 반영하지 않았습니다.</li>");
+    $("sources").innerHTML = items.join("");
+  }
+
+  function update() { renderDerived(); renderResult(); renderBars(); persist(); }
+
+  /* ---------- 결과 복사 ---------- */
+  function resultText() {
+    var L = last, best = L.best, c = card(best.card), k = kwh(), lines = [];
+    lines.push("[충전비서 계산 결과]");
+    lines.push("한 달 충전 약 " + Math.round(k.slow + k.fast) + "kWh 기준");
+    if (L.saving >= 1) {
+      lines.push("지금 " + won(L.curT) + " → 추천 " + won(L.bestT));
+      lines.push("월 " + won(L.saving) + " 절약 (1년 " + won(L.saving * 12) + ")");
+    } else lines.push("월 예상 충전비 " + won(L.curT) + " (지금 조합이 가장 쌈)");
+    lines.push("추천: " + c.name + (Object.keys(best.levels).length ? " + " + Object.keys(best.levels).map(function (id) { return prov(id).name; }).join(", ") + " 회원" : ""));
+    var todo = todoList(best);
+    if (todo.length) lines.push("할 일: " + todo.join(" / "));
+    lines.push("※ 공개 자료 기반 추정치입니다. 결제 전 사업자 앱과 카드사에서 확인하세요.");
+    return lines.join("\n");
+  }
+  $("copyBtn").addEventListener("click", function () {
+    var text = resultText();
+    function fallback() {
+      $("copyBox").hidden = false; $("copyText").value = text; $("copyText").focus(); $("copyText").select();
+      $("copyMsg").textContent = "";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        $("copyBox").hidden = true;
+        $("copyMsg").textContent = "복사했습니다. 카카오톡이나 문자에 붙여 넣으세요.";
+      }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  /* ---------- 입력 이벤트 ---------- */
+  function num(v) { var n = parseFloat(v); return isFinite(n) && n >= 0 ? n : 0; }
+  function touch() { state.touched = true; }
+  // exactOnly: 목록에서 고른 경우(change)는 정확히 일치할 때만 추가해, 입력 중 포커스가 빠져도 엉뚱한 사업자가 들어가지 않게 한다.
+  function addProvider(exactOnly) {
+    var q = $("provSearch").value.trim(), err = $("provErr");
+    if (!q) return;
+    var p = providers.filter(function (x) { return x.fast && (x.name === q || x.name.replace(/\s/g, "") === q.replace(/\s/g, "")); })[0];
+    if (!p && exactOnly) return;
+    if (!p) p = providers.filter(function (x) { return x.fast && x.name.indexOf(q) >= 0; })[0];
+    if (!p) { err.textContent = "'" + q + "'을(를) 찾지 못했습니다. 목록에 없으면 '기타 사업자'를 추가해 주세요."; return; }
+    if (state.fastProvs.indexOf(p.id) >= 0) { err.textContent = p.name + "은(는) 이미 골랐습니다."; return; }
+    if (fastIds().length >= MAX_FAST) { err.textContent = "급속 사업자는 " + MAX_FAST + "곳까지 고를 수 있습니다."; return; }
+    err.textContent = "";
+    state.fastProvs.push(p.id);
+    $("provSearch").value = "";
+    touch(); renderProvUI(); update();
+  }
+
+  var form = $("calcForm");
+  form.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.id === "km") state.km = num(t.value);
+    else if (t.id === "eff") { state.eff = num(t.value); state.car = "custom"; $("car").value = "custom"; }
+    else if (t.id === "homeShare") { state.homeShare = num(t.value); $("homeOut").textContent = state.homeShare + "%"; }
+    else if (t.id === "slowKwh") state.slowKwh = num(t.value);
+    else if (t.id === "fastKwh") state.fastKwh = num(t.value);
+    else if (t.id === "actual") state.actual = num(t.value);
+    else if (t.id === "ultraShare") { state.ultraShare = num(t.value); $("ultraOut").textContent = state.ultraShare + "%"; }
+    else if (t.id === "cardShare") { state.cardShare = num(t.value); $("shareOut").textContent = state.cardShare + "%"; }
+    else return;
+    touch(); update();
+  });
+  form.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.name === "mode") { state.mode = t.value; renderValues(); }
+    else if (t.id === "car") { state.car = t.value; var c = CARS.filter(function (x) { return x[0] === t.value; })[0]; if (c && c[2]) { state.eff = c[2]; $("eff").value = c[2]; } }
+    else if (t.id === "slowProv") state.slowProv = t.value;
+    else if (t.id === "curCard") state.card = t.value;
+    else if (t.id === "spend") state.spend = num(t.value);
+    else if (t.name && t.name.indexOf("lv-") === 0) state.levels[t.name.slice(3)] = parseInt(t.value, 10);
+    else if (t.id === "provSearch") { addProvider(true); return; }
+    else return;
+    touch();
+    if (t.name === "mode" || t.id === "slowProv") renderProvUI();
+    update();
+  });
+  form.addEventListener("click", function (e) {
+    var rm = e.target.closest("[data-remove]");
+    if (rm) {
+      state.fastProvs = state.fastProvs.filter(function (id) { return id !== rm.dataset.remove; });
+      touch(); renderProvUI(); update();
+    } else if (e.target.id === "provAdd") addProvider();
+  });
+  $("provSearch").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addProvider(); } });
+  form.addEventListener("submit", function (e) { e.preventDefault(); });
+
+  $("cmpKwh").addEventListener("input", function (e) { state.cmpKwh = num(e.target.value); update(); });
+  $("cmpTier").addEventListener("change", function (e) { state.cmpTier = e.target.value; update(); });
+  $("cmpToggle").addEventListener("click", function () { state.cmpAll = !state.cmpAll; update(); });
+
+  $("rateBody").addEventListener("input", function (e) {
+    var t = e.target, p = prov(t.dataset.p);
+    if (!p) return;
+    var o = state.overrides[p.id] = state.overrides[p.id] || {};
+    if (t.dataset.t === "name") {
+      p.name = o.name = t.value.trim() || "기타 사업자";
+      renderProvUI(); renderSources();
+    } else {
+      if (t.value.trim() === "") {
+        if (+t.dataset.i === 1) p[t.dataset.t][1] = null; else return;
+      } else p[t.dataset.t][+t.dataset.i] = num(t.value);
+      o[t.dataset.t] = p[t.dataset.t].slice();
+    }
+    $("rateSaved").textContent = "이 브라우저에 저장했습니다.";
+    update();
+  });
+  $("resetRates").addEventListener("click", function () {
+    state.overrides = {};
+    providers = buildProviders();
+    renderRates(); renderProvUI(); renderSources(); update();
+    $("rateSaved").textContent = "처음 단가로 되돌렸습니다.";
+  });
+
+  $("affNote").hidden = !Object.keys(AFFILIATE).some(function (k) { return AFFILIATE[k]; });
+  renderStatic(); renderValues(); renderProvUI(); renderRates(); renderSources(); update();
+
+  /* ---------- 앱 설치 · 공유 ---------- */
+  var SITE_URL = "https://reepower84-png.github.io/chargebiseo/";
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
+  }
+  function standalone() {
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  }
+  var deferredPrompt = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferredPrompt = e; });
+  window.addEventListener("appinstalled", function () { $("installBtn").hidden = true; toast("설치했습니다. 홈 화면에서 충전비서를 여세요."); });
+  if (standalone()) $("installBtn").hidden = true;
+
+  function installGuide() {
+    var ua = navigator.userAgent, steps;
+    if (/KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua)) {
+      steps = ["오른쪽 위(또는 아래) ⋮ 메뉴를 누르세요.", "'다른 브라우저로 열기'를 고르세요.", "열린 브라우저에서 다시 '앱 설치'를 누르세요."];
+    } else if (/iPhone|iPad|iPod/i.test(ua)) {
+      steps = ["Safari 아래쪽의 공유 버튼(네모에 위쪽 화살표)을 누르세요.", "목록을 내려 '홈 화면에 추가'를 고르세요.", "오른쪽 위 '추가'를 누르면 끝입니다."];
+    } else if (/Android/i.test(ua)) {
+      steps = ["Chrome 오른쪽 위 ⋮ 메뉴를 누르세요.", "'홈 화면에 추가' 또는 '앱 설치'를 고르세요."];
+    } else {
+      steps = ["주소창 오른쪽의 설치 아이콘(모니터에 화살표)을 누르세요.", "보이지 않으면 브라우저 메뉴에서 '앱 설치' 또는 '바로가기 만들기'를 고르세요."];
+    }
+    $("installSteps").innerHTML = "<ol>" + steps.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ol>";
+    $("installSheet").hidden = false;
+    $("installClose").focus();
+  }
+  $("installBtn").addEventListener("click", function () {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function (r) {
+        if (r.outcome === "accepted") $("installBtn").hidden = true;
+        deferredPrompt = null;
+      });
+    } else installGuide();
+  });
+  $("installClose").addEventListener("click", function () { $("installSheet").hidden = true; });
+  $("installSheet").addEventListener("click", function (e) { if (e.target.id === "installSheet") $("installSheet").hidden = true; });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") $("installSheet").hidden = true; });
+
+  $("shareBtn").addEventListener("click", function () {
+    var url = /^https?:/.test(location.href) && location.hostname !== "127.0.0.1" && location.hostname !== "localhost" ? location.origin + location.pathname : SITE_URL;
+    var data = { title: "충전비서", text: "전기차 충전비, 지금 쓰는 카드로 얼마 손해 보고 있는지 계산해 보세요.", url: url };
+    function copyLink() {
+      try {
+        navigator.clipboard.writeText(data.text + "\n" + url).then(function () { toast("링크를 복사했습니다. 카톡이나 문자에 붙여 넣으세요."); },
+          function () { toast("이 주소를 복사해 공유하세요: " + url); });
+      } catch (e) { toast("이 주소를 복사해 공유하세요: " + url); }
+    }
+    if (navigator.share) {
+      navigator.share(data).catch(function (e) { if (e && e.name !== "AbortError") copyLink(); });
+    } else copyLink();
+  });
+
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
+})();
+</script>
+</body>
+</html>
