@@ -96,22 +96,26 @@ a { color: var(--accent); }
 .step-n { font-family: var(--font-num); font-size: 12px; color: var(--accent); font-weight: 600; }
 .step-h h3 { font-size: 15px; font-weight: 700; }
 .step-h .seg { margin-left: auto; }
-.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
-@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 480px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
+/* 긴 선택지(차종 이름 등)가 좁은 화면에서 칸을 밀어내지 않게 한다. */
+.panel, .step, .more-body { grid-template-columns: minmax(0, 1fr); }
+select.sel { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
 label.f { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
 .field { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .field input, .field select, select.sel {
   flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink);
   font: 500 16px var(--font-num); padding: 10px 12px;
 }
-select.sel { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: var(--font-body); font-size: 15px; width: 100%; }
+/* 입력 글자는 16px 이상: 아이폰이 입력할 때 화면을 확대하지 않게 한다. */
+select.sel { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: var(--font-body); font-size: 16px; width: 100%; }
 .field input:focus, .field select:focus, select.sel:focus { outline: none; }
 .field:focus-within, select.sel:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.field input.txt { font-family: var(--font-body); font-size: 15px; }
+.field input.txt { font-family: var(--font-body); font-size: 16px; }
 .unit { padding-right: 12px; color: var(--muted); font: 13px var(--font-num); white-space: nowrap; }
 .hint { font-size: 12.5px; color: var(--muted); margin: 0; }
 .derived { font: 13px var(--font-num); color: var(--ink); background: var(--bg); border-radius: 8px; padding: 8px 12px; }
-input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="range"] { width: 100%; margin: 4px 0; accent-color: var(--accent); }
 .range-row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip-on {
@@ -119,8 +123,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   background: var(--accent); color: var(--accent-ink); font-size: 13.5px;
 }
 .chip-on button {
-  border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 16px; line-height: 1;
-  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 18px; line-height: 1;
+  width: 32px; height: 32px; margin: -2px -2px -2px 0; border-radius: 50%; display: grid; place-items: center;
 }
 .chip-on button:hover { background: rgba(255, 255, 255, .2); }
 .add-row { display: flex; gap: 8px; }
@@ -138,7 +142,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg label { position: relative; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
-.seg span { display: block; padding: 5px 11px; font-size: 12.5px; cursor: pointer; color: var(--muted); white-space: nowrap; }
+.seg span { display: block; padding: 9px 12px; font-size: 13px; line-height: 1.4; cursor: pointer; color: var(--muted); white-space: nowrap; text-align: center; }
+@media (max-width: 420px) {
+  .step-h .seg { margin-left: 0; width: 100%; }
+  .step-h .seg label { flex: 1; min-width: 0; }
+  .step-h .seg span { padding-inline: 6px; white-space: normal; }
+  .panel { padding: 18px 16px; }
+}
 .seg label + label span { border-left: 1px solid var(--line); }
 .seg input:checked + span { background: var(--ink); color: var(--surface); }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -146,7 +156,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 details.more { border-top: 1px solid var(--line); padding-top: 16px; }
 details.more > summary {
   cursor: pointer; font-weight: 700; font-size: 14.5px; color: var(--accent); list-style: none;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-block: 8px;
 }
 details.more > summary::-webkit-details-marker { display: none; }
 details.more > summary::before { content: "+"; font: 600 16px var(--font-num); width: 18px; }
@@ -168,7 +178,8 @@ details.more > summary small { color: var(--muted); font-weight: 400; }
 .save { margin-top: 14px; padding: 16px; border-radius: 8px; background: var(--good-soft); color: var(--good); display: grid; gap: 2px; }
 .save.zero { background: var(--accent-soft); color: var(--accent); }
 .save-l { font-family: var(--font-body); font-size: 13px; font-weight: 500; }
-.save-v { font-size: clamp(30px, 4.4vw, 40px); font-weight: 600; line-height: 1.15; letter-spacing: -.02em; }
+.save-v { font-size: clamp(26px, 4.4vw, 40px); font-weight: 600; line-height: 1.15; letter-spacing: -.02em; white-space: nowrap; }
+@media (max-width: 360px) { .save-v { font-size: 25px; } .receipt { padding-inline: 16px; } }
 .save-y { font-size: 12.5px; }
 .cmp { margin-top: 14px; display: grid; gap: 6px; }
 .cmp div, .li { display: flex; justify-content: space-between; gap: 12px; }
@@ -190,7 +201,7 @@ details.more > summary small { color: var(--muted); font-weight: 400; }
 .note { font-size: 12px; color: var(--muted); margin: 0; }
 .cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .copy-box { display: grid; gap: 6px; }
-.copy-box textarea { width: 100%; min-height: 150px; font: 13px var(--font-body); padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); resize: vertical; }
+.copy-box textarea { width: 100%; min-height: 150px; font: 16px var(--font-body); padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); resize: vertical; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border-radius: 8px;
@@ -262,13 +273,13 @@ thead tr:first-child th { color: var(--ink); font-weight: 700; }
 thead tr:nth-child(2) th { top: 33px; }
 tbody tr:last-child td { border-bottom: 0; }
 tr.grp td { background: var(--bg); font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
-td input { width: 76px; text-align: right; font: 500 13.5px var(--font-num); padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+td input { width: 80px; text-align: right; font: 500 16px var(--font-num); padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
 td input::placeholder { color: var(--warn); font-family: var(--font-body); font-size: 12px; }
 td .dash { color: var(--muted); }
 .cell-warn { display: block; color: var(--warn); font-size: 11.5px; white-space: normal; max-width: 260px; }
 tr.custom td { background: var(--accent-soft); }
 td input.name-in { text-align: left; }
-.name-in { width: 140px; font: 700 13.5px var(--font-body); padding: 5px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.name-in { width: 140px; font: 700 16px var(--font-body); padding: 5px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); }
 .tbl-act { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
 .src { display: grid; gap: 8px; }
 .src h3 { font-size: 15px; }
@@ -383,7 +394,7 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
         <label class="f" for="provSearch">밖에서 주로 쓰는 급속 충전 사업자 (여러 곳이면 충전량을 똑같이 나눠 계산)</label>
         <div class="chips" id="fastChips"></div>
         <div class="add-row">
-          <span class="field"><input id="provSearch" class="txt" list="provList" placeholder="사업자 이름 검색 (예: 채비, 테슬라)"></span>
+          <span class="field"><input id="provSearch" class="txt" list="provList" placeholder="사업자 검색 (예: 채비)"></span>
           <button type="button" class="btn-sm" id="provAdd">추가</button>
         </div>
         <datalist id="provList"></datalist>
@@ -822,7 +833,8 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 
   function renderDerived() {
     var k = kwh();
-    $("derived").textContent = "→ 한 달 약 " + r1(k.slow + k.fast) + "kWh 충전 (완속 " + r1(k.slow) + " · 급속 " + r1(k.fast) + ", 충전 손실 10% 포함)";
+    $("derived").textContent = "→ 한 달 약 " + r1(k.slow + k.fast) + "kWh 충전 (완속 " + r1(k.slow) + " · 급속 " + r1(k.fast) + ", 충전 손실 10% 포함)" +
+      (state.eff > 0 ? "" : " · 전비를 넣어 주세요. 지금은 5km/kWh로 계산했습니다.");
   }
 
   /* ---------- 결과 화면 ---------- */
@@ -855,6 +867,9 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
     } else if (cal.bad) {
       cb.hidden = false; cb.className = "calib bad";
       cb.textContent = "실제 결제액이 계산값의 " + (Math.round(cal.f * 10) / 10) + "배라 보정하지 않았습니다. 주행거리, 전비, 충전소 선택을 확인해 주세요.";
+    } else if (kwh().fast > 0 && !fastIds().length) {
+      cb.hidden = false; cb.className = "calib bad";
+      cb.textContent = "급속 충전 " + r1(kwh().fast) + "kWh가 계산에서 빠졌습니다. 밖에서 쓰는 급속 충전 사업자를 한 곳 이상 추가해 주세요.";
     } else if (cur.unk) {
       cb.hidden = false; cb.className = "calib bad";
       cb.textContent = "미가입으로 고른 사업자 중 비회원 단가가 공개되지 않은 곳은 회원가로 계산했습니다. 실제 지금 요금은 이보다 높을 수 있습니다.";
@@ -1044,9 +1059,11 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
       p.name = o.name = t.value.trim() || "기타 사업자";
       renderProvUI(); renderSources();
     } else {
+      var v = parseFloat(t.value);
       if (t.value.trim() === "") {
         if (+t.dataset.i === 1) p[t.dataset.t][1] = null; else return;
-      } else p[t.dataset.t][+t.dataset.i] = num(t.value);
+      } else if (!(v > 0)) return; // 0원 이하 단가는 입력 중인 값으로 보고 반영하지 않는다.
+      else p[t.dataset.t][+t.dataset.i] = v;
       o[t.dataset.t] = p[t.dataset.t].slice();
     }
     $("rateSaved").textContent = "이 브라우저에 저장했습니다.";

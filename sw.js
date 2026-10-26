@@ -1,6 +1,6 @@
 // 충전비서 서비스 워커: 설치한 앱이 인터넷이 약해도 마지막으로 본 화면을 열 수 있게 한다.
 // 같은 사이트 파일은 네트워크를 먼저 시도해 단가 갱신이 바로 반영되고, 실패하면 저장본을 쓴다.
-const CACHE = "chargebiseo-v1";
+const CACHE = "chargebiseo-v2";
 const ASSETS = ["./", "index.html", "data/chargeinfo.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
