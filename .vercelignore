@@ -1,0 +1,7 @@
+.playwright-mcp
+node_modules
+.env*
+.vercel
+scripts
+.github
+README.md
