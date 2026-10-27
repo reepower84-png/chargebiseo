@@ -2,7 +2,7 @@
 
 전기차 월 주행거리와 자주 가는 충전소를 넣으면, 회원가·비회원가·출력별 단가·카드 할인을 합쳐 가장 싼 충전 멤버십과 카드 조합을 계산하는 웹앱입니다.
 
-- 사이트: https://reepower84-png.github.io/chargebiseo/
+- 사이트: https://chargebiseo.vercel.app/ (GitHub Pages 주소 https://reepower84-png.github.io/chargebiseo/ 도 같은 내용)
 - 서버 없이 `index.html` 하나로 동작하고, 홈 화면에 설치할 수 있습니다(PWA).
 
 ## 파일 구성
